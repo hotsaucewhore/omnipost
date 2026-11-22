@@ -1,0 +1,12 @@
+{
+  "name": "omnipost",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mobile-first cross-platform video publisher (TikTok, Instagram Reels, YouTube Shorts & Long-Form, Facebook Video)",
+  "scripts": {
+    "server": "npm --prefix server run dev",
+    "mobile": "npm --prefix mobile run start",
+    "web": "npm --prefix mobile run web",
+    "test:server": "npm --prefix server run test"
+  }
+}

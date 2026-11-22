@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Expo & Metro build artifacts
+mobile/.expo/
+mobile/dist/
+mobile/dist-verify/
+mobile/web-build/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+server/.env
+mobile/.env
+
+# Local SQLite WAL runtime database & uploaded media
+server/data/*.sqlite
+server/data/*.sqlite-shm
+server/data/*.sqlite-wal
+server/data/*.json
+server/uploads/*
+!server/uploads/.gitkeep
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+*.log

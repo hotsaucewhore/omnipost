@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "OmniPost",
+    "slug": "omnipost",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "omnipost",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "OmniPost needs photo library access so you can select videos and custom thumbnails to publish across your connected social platforms."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#090B10",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow OmniPost to access your videos and thumbnails for cross-platform publishing."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#090B10"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

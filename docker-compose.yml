@@ -1,0 +1,17 @@
+services:
+  omnipost-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./server/.env
+    volumes:
+      - omnipost_data:/app/server/data
+      - omnipost_uploads:/app/server/uploads
+    restart: unless-stopped
+
+volumes:
+  omnipost_data:
+  omnipost_uploads:
