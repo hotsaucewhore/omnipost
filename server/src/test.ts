@@ -481,45 +481,53 @@ async function runTests() {
     const blockedAccJson: any = await blockedAccRes.json();
     assert.strictEqual(blockedAccJson.requiredTier, 'creator');
 
-    // Upgrade to Creator ($12/mo) -> unlocks all 8 channels
-    const creatorUpRes = await fetch(`${baseUrl}/api/billing/checkout`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({
-        planTier: 'creator',
-        billingInterval: 'monthly',
-        workspaceId: userWsId,
-      }),
-    });
-    assert.strictEqual(creatorUpRes.status, 200);
-    const creatorUpJson: any = await creatorUpRes.json();
-    assert.strictEqual(creatorUpJson.user.planTier, 'creator');
+    // Upgrade to Creator ($12/mo) & Studio ($29/mo) in sandbox test mode
+    const savedStripeKey = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+    try {
+      const creatorUpRes = await fetch(`${baseUrl}/api/billing/checkout`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          planTier: 'creator',
+          billingInterval: 'monthly',
+          workspaceId: userWsId,
+        }),
+      });
+      assert.strictEqual(creatorUpRes.status, 200);
+      const creatorUpJson: any = await creatorUpRes.json();
+      assert.strictEqual(creatorUpJson.user.planTier, 'creator');
 
-    const unlockedAccRes = await fetch(`${baseUrl}/api/accounts/sandbox`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({ platformGroup: 'youtube', workspaceId: userWsId }),
-    });
-    assert.strictEqual(unlockedAccRes.status, 201);
+      const unlockedAccRes = await fetch(`${baseUrl}/api/accounts/sandbox`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ platformGroup: 'youtube', workspaceId: userWsId }),
+      });
+      assert.strictEqual(unlockedAccRes.status, 201);
 
-    // Upgrade to Studio ($29/mo annual) -> unlocks unlimited client workspaces
-    const studioUpRes = await fetch(`${baseUrl}/api/billing/checkout`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({
-        planTier: 'studio',
-        billingInterval: 'annual',
-        workspaceId: userWsId,
-      }),
-    });
-    assert.strictEqual(studioUpRes.status, 200);
+      // Upgrade to Studio ($29/mo annual) -> unlocks unlimited client workspaces
+      const studioUpRes = await fetch(`${baseUrl}/api/billing/checkout`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          planTier: 'studio',
+          billingInterval: 'annual',
+          workspaceId: userWsId,
+        }),
+      });
+      assert.strictEqual(studioUpRes.status, 200);
 
-    const unlockedWsRes = await fetch(`${baseUrl}/api/workspaces`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({ name: 'Client Two' }),
-    });
-    assert.strictEqual(unlockedWsRes.status, 201);
+      const unlockedWsRes = await fetch(`${baseUrl}/api/workspaces`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ name: 'Client Two' }),
+      });
+      assert.strictEqual(unlockedWsRes.status, 201);
+    } finally {
+      if (savedStripeKey !== undefined) {
+        process.env.STRIPE_SECRET_KEY = savedStripeKey;
+      }
+    }
 
     // Clean up QA user and all their workspaces/accounts
     const delUserRes = await fetch(`${baseUrl}/api/auth/me`, {

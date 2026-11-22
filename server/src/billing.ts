@@ -88,6 +88,11 @@ export async function createStripeCheckoutSession(params: {
         params.billingInterval
       })`
     );
+    // Cloud SaaS product tax code for Stripe Managed Payments / Stripe Tax compatibility
+    form.set(
+      'line_items[0][price_data][product_data][tax_code]',
+      'txcd_10103001'
+    );
   }
 
   const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
