@@ -193,7 +193,18 @@ async function executePlatformPublish(jobId: string, platformId: PlatformId) {
 
 export function createApp() {
   const app = express();
+  app.set('trust proxy', 1);
   app.use(cors());
+
+  const resolvePublicServerOrigin = (req: express.Request): string => {
+    if (process.env.PUBLIC_SERVER_URL) {
+      return process.env.PUBLIC_SERVER_URL.replace(/\/+$/, '');
+    }
+    if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+      return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`.replace(/\/+$/, '');
+    }
+    return `${req.protocol}://${req.get('host')}`.replace(/\/+$/, '');
+  };
 
   // Signed Stripe Subscription Lifecycle Webhook (requires raw unparsed body)
   app.post(
@@ -365,9 +376,7 @@ export function createApp() {
 
   app.post('/api/compliance/meta-data-deletion', (req, res) => {
     const baseUrl =
-      process.env.PUBLIC_WEB_URL ||
-      process.env.PUBLIC_SERVER_URL ||
-      `${req.protocol}://${req.get('host')}`;
+      process.env.PUBLIC_WEB_URL || resolvePublicServerOrigin(req);
     res.json(buildMetaDataDeletionReceipt(baseUrl));
   });
 
@@ -500,13 +509,11 @@ export function createApp() {
 
     if (planTier !== 'free' && isStripeLiveConfigured()) {
       try {
-        const returnServerBaseUrl =
-          process.env.PUBLIC_SERVER_URL ||
-          `${req.protocol}://${req.get('host')}`;
+        const returnServerBaseUrl = resolvePublicServerOrigin(req);
         const clientAppUrl =
           String(req.body?.clientAppUrl || '') ||
           process.env.PUBLIC_WEB_URL ||
-          'http://localhost:8081';
+          returnServerBaseUrl;
 
         const session = await createStripeCheckoutSession({
           userId: user.id,
@@ -1054,8 +1061,7 @@ export function createApp() {
       typeof req.query.workspaceId === 'string' && req.query.workspaceId
         ? req.query.workspaceId
         : DEFAULT_WORKSPACE_ID;
-    const baseUrl =
-      process.env.PUBLIC_SERVER_URL || `${req.protocol}://${req.get('host')}`;
+    const baseUrl = resolvePublicServerOrigin(req);
     const redirectUri = `${baseUrl}/api/oauth/${group}/callback`;
     const state = crypto.randomBytes(16).toString('hex');
     const { authUrl, codeVerifier } = adapter.getOAuthUrl(redirectUri, state);
@@ -1103,10 +1109,13 @@ export function createApp() {
         connectedAt: new Date().toISOString(),
       });
 
+      const webReturnUrl = (
+        process.env.PUBLIC_WEB_URL || resolvePublicServerOrigin(req)
+      ).replace(/\/+$/, '');
       res
         .status(200)
         .send(
-          `<html><body style="font-family:sans-serif;background:#090B10;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;"><div><h2>Connected ${bundle.displayName} (${bundle.handle})!</h2><p>You can close this window and return to OmniPost.</p></div></body></html>`
+          `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connected · OmniPost</title></head><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F5F4F0;color:#181816;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;"><div style="background:#FFFFFF;border:1px solid #E5E3DC;border-radius:14px;padding:32px;max-width:420px;width:100%;text-align:center;"><div style="width:10px;height:10px;border-radius:5px;background:#1E7A46;margin:0 auto 14px;"></div><h2 style="margin:0 0 8px;font-size:20px;letter-spacing:-0.3px;">Connected ${bundle.displayName} (${bundle.handle})</h2><p style="margin:0 0 22px;font-size:14px;color:#6E6D68;line-height:1.5;">Your live channel token is saved and encrypted in your OmniPost workspace.</p><a href="${webReturnUrl}/accounts" style="display:inline-block;background:#181816;color:#FFFFFF;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:14px;font-weight:600;">Return to Accounts</a></div></body></html>`
         );
     } catch (err: any) {
       res.status(500).send(`OAuth Error: ${err?.message || 'Unknown error'}`);
@@ -2267,7 +2276,7 @@ export function createApp() {
 
   // --- TRACK 4: LAUNCH READINESS & PRODUCTION SPA STATIC SERVING ---
   app.get('/api/launch-readiness', (req, res) => {
-    const origin = `${req.protocol}://${req.get('host')}`;
+    const origin = resolvePublicServerOrigin(req);
     res.json({ readiness: buildLaunchReadinessReport(origin) });
   });
 

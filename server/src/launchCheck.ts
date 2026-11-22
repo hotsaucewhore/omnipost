@@ -86,12 +86,19 @@ const CHANNEL_APPROVAL_CATALOG: Array<{
 export function buildLaunchReadinessReport(
   fallbackServerOrigin: string
 ): LaunchReadinessReport {
+  const railwayOrigin = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : '';
   const publicServerUrl = (
-    process.env.PUBLIC_SERVER_URL || fallbackServerOrigin
+    process.env.PUBLIC_SERVER_URL ||
+    railwayOrigin ||
+    fallbackServerOrigin
   ).replace(/\/+$/, '');
   const publicWebUrl = (
     process.env.PUBLIC_WEB_URL ||
     process.env.PUBLIC_SERVER_URL ||
+    railwayOrigin ||
+    fallbackServerOrigin ||
     'http://localhost:8081'
   ).replace(/\/+$/, '');
 
