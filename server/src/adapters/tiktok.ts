@@ -88,34 +88,51 @@ export const tiktokAdapter: PlatformAdapter = {
 
     ctx.onProgress('uploading', 15, 'Initializing TikTok Content Posting API v2...');
 
-    const initRes = await fetch(
-      'https://open.tiktokapis.com/v2/post/publish/video/init/',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${ctx.account.accessToken}`,
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: JSON.stringify({
-          post_info: {
-            title: ctx.resolvedText.combinedCaptionOrDescription.slice(0, 2200),
-            privacy_level: ctx.override.tiktokPrivacy ?? 'PUBLIC_TO_EVERYONE',
-            disable_comment: ctx.override.tiktokAllowComments === false,
-            disable_duet: ctx.override.tiktokAllowDuet === false,
-            disable_stitch: ctx.override.tiktokAllowStitch === false,
-          },
-          source_info: {
-            source: 'FILE_UPLOAD',
-            video_size: fileSize,
-            chunk_size: fileSize,
-            total_chunk_count: 1,
-          },
-        }),
-      }
-    );
+    const buildInitPayload = (privacyLevel: string) => ({
+      post_info: {
+        title: ctx.resolvedText.combinedCaptionOrDescription.slice(0, 2200),
+        privacy_level: privacyLevel,
+        disable_comment: ctx.override.tiktokAllowComments === false,
+        disable_duet: ctx.override.tiktokAllowDuet === false,
+        disable_stitch: ctx.override.tiktokAllowStitch === false,
+      },
+      source_info: {
+        source: 'FILE_UPLOAD',
+        video_size: fileSize,
+        chunk_size: fileSize,
+        total_chunk_count: 1,
+      },
+    });
 
-    const initJson: any = await initRes.json();
-    if (!initRes.ok || initJson?.error?.code !== 'ok') {
+    const requestInit = async (privacyLevel: string) => {
+      const r = await fetch(
+        'https://open.tiktokapis.com/v2/post/publish/video/init/',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${ctx.account.accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: JSON.stringify(buildInitPayload(privacyLevel)),
+        }
+      );
+      const j: any = await r.json();
+      return { ok: r.ok, json: j };
+    };
+
+    const preferredPrivacy = ctx.override.tiktokPrivacy ?? 'PUBLIC_TO_EVERYONE';
+    let { ok: initOk, json: initJson } = await requestInit(preferredPrivacy);
+
+    // Unaudited / Sandbox TikTok apps require SELF_ONLY privacy until public review completes
+    if (
+      (!initOk || initJson?.error?.code !== 'ok') &&
+      preferredPrivacy !== 'SELF_ONLY' &&
+      String(initJson?.error?.code || '').includes('unaudited_client')
+    ) {
+      ({ ok: initOk, json: initJson } = await requestInit('SELF_ONLY'));
+    }
+
+    if (!initOk || initJson?.error?.code !== 'ok') {
       throw new Error(
         initJson?.error?.message || 'TikTok video init failed'
       );
