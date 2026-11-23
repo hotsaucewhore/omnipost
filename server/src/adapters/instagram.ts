@@ -18,8 +18,9 @@ export const instagramAdapter: PlatformAdapter = {
       redirect_uri: redirectUri,
       state,
       response_type: 'code',
+      auth_type: 'rerequest',
       scope:
-        'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
+        'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management',
     });
     return {
       authUrl: `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`,
@@ -41,19 +42,42 @@ export const instagramAdapter: PlatformAdapter = {
       throw new Error(tokenJson.error?.message || 'Instagram Meta OAuth failed');
     }
 
-    // Discover connected Instagram Business/Creator account via Facebook Pages
+    // Discover connected Instagram Business/Creator account via Facebook Pages (and Business Portfolios)
     const pagesRes = await fetch(
-      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,instagram_business_account{id,username,name}&access_token=${tokenJson.access_token}`
+      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}&access_token=${tokenJson.access_token}`
     );
     const pagesJson: any = await pagesRes.json();
-    const pageWithIg = (pagesJson?.data ?? []).find(
-      (p: any) => p.instagram_business_account?.id
-    );
-    const igAcc = pageWithIg?.instagram_business_account;
-    if (!igAcc?.id) {
-      throw new Error(
-        'No Instagram Professional account linked to a Facebook Page was found on this Meta login.'
+    let allPages: any[] = Array.isArray(pagesJson?.data) ? [...pagesJson.data] : [];
+
+    if (allPages.length === 0) {
+      const bizRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/businesses?fields=id,name,owned_pages{id,name,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}},client_pages{id,name,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}}&access_token=${tokenJson.access_token}`
       );
+      const bizJson: any = await bizRes.json();
+      for (const b of bizJson?.data ?? []) {
+        if (Array.isArray(b?.owned_pages?.data)) {
+          allPages.push(...b.owned_pages.data);
+        }
+        if (Array.isArray(b?.client_pages?.data)) {
+          allPages.push(...b.client_pages.data);
+        }
+      }
+    }
+
+    const pageWithIg = allPages.find(
+      (p: any) =>
+        p?.instagram_business_account?.id || p?.connected_instagram_account?.id
+    );
+    const igAcc =
+      pageWithIg?.instagram_business_account ||
+      pageWithIg?.connected_instagram_account;
+    if (!igAcc?.id) {
+      const pageNames = allPages.map((p: any) => p?.name).filter(Boolean);
+      const detail =
+        pageNames.length > 0
+          ? `Found Facebook Page (${pageNames.join(', ')}), but Instagram isn't finished linking to that Page yet (check Instagram app -> Edit Profile -> Page, and make sure Instagram is switched to Creator/Business).`
+          : `Meta returned 0 Facebook Pages on this login. Open https://www.facebook.com/settings/?tab=business_tools, remove OmniPost to clear cached permissions, then Sign in live again and check ALL Page & Instagram boxes.`;
+      throw new Error(detail);
     }
 
     return {

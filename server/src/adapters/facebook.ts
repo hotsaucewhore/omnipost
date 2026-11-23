@@ -14,7 +14,9 @@ export const facebookAdapter: PlatformAdapter = {
       redirect_uri: redirectUri,
       state,
       response_type: 'code',
-      scope: 'pages_show_list,pages_read_engagement,pages_manage_posts',
+      auth_type: 'rerequest',
+      scope:
+        'pages_show_list,pages_read_engagement,pages_manage_posts,business_management',
     });
     return {
       authUrl: `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`,
@@ -40,9 +42,27 @@ export const facebookAdapter: PlatformAdapter = {
       `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&access_token=${tokenJson.access_token}`
     );
     const pagesJson: any = await pagesRes.json();
-    const firstPage = pagesJson?.data?.[0];
+    let firstPage = pagesJson?.data?.[0];
+
     if (!firstPage?.id || !firstPage?.access_token) {
-      throw new Error('No managed Facebook Page found on this Meta account.');
+      const bizRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/businesses?fields=id,name,owned_pages{id,name,access_token},client_pages{id,name,access_token}&access_token=${tokenJson.access_token}`
+      );
+      const bizJson: any = await bizRes.json();
+      for (const b of bizJson?.data ?? []) {
+        const candidate =
+          b?.owned_pages?.data?.[0] || b?.client_pages?.data?.[0];
+        if (candidate?.id && candidate?.access_token) {
+          firstPage = candidate;
+          break;
+        }
+      }
+    }
+
+    if (!firstPage?.id || !firstPage?.access_token) {
+      throw new Error(
+        'No managed Facebook Page found on this Meta login. Open https://www.facebook.com/settings/?tab=business_tools, remove OmniPost to reset cached permissions, and Sign in live again checking your Facebook Page.'
+      );
     }
 
     return {
