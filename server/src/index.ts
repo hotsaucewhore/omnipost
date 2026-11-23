@@ -374,6 +374,23 @@ export function createApp() {
     res.status(200).send(renderTermsHtml());
   });
 
+  // Dynamic TikTok Developer Portal URL-Prefix Signature Verification (.txt)
+  app.get(/\/tiktok[^/]*\.txt$/i, (_req, res) => {
+    const raw = (process.env.TIKTOK_SITE_VERIFICATION || '').trim();
+    if (!raw) {
+      res
+        .status(404)
+        .type('text/plain')
+        .send('Set TIKTOK_SITE_VERIFICATION in Railway Variables.');
+      return;
+    }
+    const payload = raw.startsWith('tiktok-developers-site-verification=')
+      ? raw
+      : `tiktok-developers-site-verification=${raw}`;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.status(200).send(payload);
+  });
+
   app.post('/api/compliance/meta-data-deletion', (req, res) => {
     const baseUrl =
       process.env.PUBLIC_WEB_URL || resolvePublicServerOrigin(req);
