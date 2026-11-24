@@ -60,11 +60,11 @@ function resolveDefaultServerUrl(): string {
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const lanHost = hostUri.split(':')[0];
-    if (lanHost) {
+    if (lanHost && (lanHost.startsWith('192.') || lanHost.startsWith('10.') || lanHost === 'localhost')) {
       return `http://${lanHost}:4000`;
     }
   }
-  return 'http://localhost:4000';
+  return 'https://omnipoststudio.com';
 }
 
 export const SERVER_BASE_URL = resolveDefaultServerUrl();

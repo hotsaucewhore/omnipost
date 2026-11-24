@@ -1,21 +1,24 @@
 {
   "expo": {
-    "name": "OmniPost",
-    "slug": "omnipost",
+    "name": "OmniPost Studio",
+    "slug": "omnipost-studio",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "omnipost",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.omnipoststudio.app",
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "OmniPost needs photo library access so you can select videos and custom thumbnails to publish across your connected social platforms."
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "OmniPost Studio needs photo library access so you can select videos, carousel photos, and custom thumbnails to publish across your connected social accounts."
       }
     },
     "android": {
+      "package": "com.omnipoststudio.app",
       "adaptiveIcon": {
-        "backgroundColor": "#090B10",
+        "backgroundColor": "#F5F4F0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -32,7 +35,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow OmniPost to access your videos and thumbnails for cross-platform publishing."
+          "photosPermission": "Allow OmniPost Studio to access your videos and photos for cross-platform publishing."
         }
       ],
       [
@@ -40,7 +43,7 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#090B10"
+          "backgroundColor": "#F5F4F0"
         }
       ]
     ],
