@@ -56,22 +56,29 @@ export const tiktokAdapter: PlatformAdapter = {
       throw new Error(tokenJson.error_description || 'TikTok token exchange failed');
     }
 
+    // user.info.basic grants open_id, display_name & avatar_url (username requires user.info.profile)
     const userRes = await fetch(
-      'https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username',
+      'https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url',
       {
         headers: { Authorization: `Bearer ${tokenJson.access_token}` },
       }
     );
     const userJson: any = await userRes.json();
     const user = userJson?.data?.user ?? {};
+    const realName = String(user.display_name || '').trim();
+    const derivedHandle = user.username
+      ? `@${user.username}`
+      : realName
+      ? `@${realName.replace(/[^a-zA-Z0-9._]/g, '').toLowerCase() || 'tiktok.live'}`
+      : `@tiktok.${String(tokenJson.open_id || '').slice(0, 6) || 'live'}`;
 
     return {
       accessToken: tokenJson.access_token,
       refreshToken: tokenJson.refresh_token,
       expiresInSec: tokenJson.expires_in,
       externalAccountId: tokenJson.open_id || user.open_id || 'tiktok_user',
-      handle: user.username ? `@${user.username}` : '@tiktok.creator',
-      displayName: user.display_name || 'TikTok Creator',
+      handle: derivedHandle,
+      displayName: realName || 'TikTok Live Account',
     };
   },
 
