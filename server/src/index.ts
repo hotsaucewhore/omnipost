@@ -628,7 +628,7 @@ export function createApp() {
     const workspace = store.createWorkspace(
       String(name),
       accentColor,
-      seedDemoAccounts !== false,
+      Boolean(seedDemoAccounts),
       user.id
     );
     res.status(201).json({ workspace });
@@ -1094,6 +1094,13 @@ export function createApp() {
 
   app.get('/api/oauth/:group/callback', async (req, res) => {
     try {
+      const oauthErr = String(
+        req.query.error_description || req.query.error || ''
+      ).trim();
+      if (oauthErr) {
+        res.status(400).send(`OAuth Error (${req.params.group}): ${oauthErr}`);
+        return;
+      }
       const state = String(req.query.state || '');
       const code = String(req.query.code || '');
       const saved = pendingOAuthStates.get(state);

@@ -1213,14 +1213,6 @@ class SqliteStore {
     this.runInTransaction(() => {
       this.insertUserRaw(userRecord);
       this.insertWorkspaceRaw(initialWorkspace);
-      for (const acc of buildDemoAccountsForWorkspace(
-        wsId,
-        wsName,
-        now,
-        'free_starter'
-      )) {
-        this.upsertAccountRaw(acc);
-      }
       this.insertPresetRaw({
         id: `preset_${Date.now().toString(36)}_starter`,
         workspaceId: wsId,

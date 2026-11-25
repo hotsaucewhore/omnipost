@@ -471,7 +471,16 @@ async function runTests() {
     const blockedWsJson: any = await blockedWsRes.json();
     assert.strictEqual(blockedWsJson.requiredTier, 'studio');
 
-    // Starter plan (free) starts with 3 channels and blocks 4th channel with 402 -> requires Creator
+    // Starter plan (free) starts clean (0 fake accounts), allows up to 3 channels, and blocks 4th channel with 402 -> requires Creator
+    assert.strictEqual(regJson.usage.accountsInActiveWorkspace, 0);
+    for (const grp of ['tiktok', 'instagram', 'x']) {
+      const addRes = await fetch(`${baseUrl}/api/accounts/sandbox`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ platformGroup: grp, workspaceId: userWsId }),
+      });
+      assert.strictEqual(addRes.status, 201);
+    }
     const blockedAccRes = await fetch(`${baseUrl}/api/accounts/sandbox`, {
       method: 'POST',
       headers: authHeaders,
@@ -871,7 +880,10 @@ async function runTests() {
       await fetch(`${baseUrl}/api/workspaces`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Approval Gate Agency' }),
+        body: JSON.stringify({
+          name: 'Approval Gate Agency',
+          seedDemoAccounts: true,
+        }),
       })
     ).json();
     const agencyWsId = agencyWsRes.workspace.id;
@@ -1258,7 +1270,10 @@ async function runTests() {
         await fetch(`${baseUrl}/api/workspaces`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'Evergreen Test Brand' }),
+          body: JSON.stringify({
+            name: 'Evergreen Test Brand',
+            seedDemoAccounts: true,
+          }),
         })
       ).json()
     ).workspace;

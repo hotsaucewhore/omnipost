@@ -34,7 +34,7 @@ export function WorkspaceModal({ visible, onClose }: Props) {
 
   const [newName, setNewName] = useState('');
   const [selectedColor, setSelectedColor] = useState(WORKSPACE_COLORS[2]);
-  const [seedDemo, setSeedDemo] = useState(true);
+  const [seedDemo, setSeedDemo] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const atWorkspaceLimit =

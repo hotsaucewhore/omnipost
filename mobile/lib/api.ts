@@ -109,12 +109,15 @@ export function setStoredAuthToken(token: string | null) {
 export function getStoredSignedOut(): boolean {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     try {
-      return window.localStorage.getItem(SIGNED_OUT_STORAGE_KEY) === '1';
+      if (window.localStorage.getItem(SIGNED_OUT_STORAGE_KEY) === '1') {
+        return true;
+      }
+      return !window.localStorage.getItem(TOKEN_STORAGE_KEY);
     } catch {
       return memorySignedOut;
     }
   }
-  return memorySignedOut;
+  return memorySignedOut || !memoryAuthToken;
 }
 
 export function setStoredSignedOut(val: boolean) {

@@ -316,13 +316,11 @@ export function OmniPostProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<BrandWorkspace[]>([DEFAULT_WS]);
   const [workspaceAccountCounts, setWorkspaceAccountCounts] = useState<
     Record<string, number>
-  >({ [DEFAULT_WORKSPACE_ID]: ACCOUNT_GROUPS.length });
+  >({});
   const [activeWorkspaceId, setActiveWorkspaceId] =
     useState<string>(DEFAULT_WORKSPACE_ID);
 
-  const [accounts, setAccounts] = useState<ConnectedAccount[]>(
-    INITIAL_OPTIMISTIC_ACCOUNTS
-  );
+  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [liveConfigured, setLiveConfigured] = useState<
     Record<AccountGroupId, boolean>
   >({
@@ -574,7 +572,7 @@ export function OmniPostProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createWorkspace = useCallback(
-    async (name: string, accentColor?: string, seedDemoAccounts = true) => {
+    async (name: string, accentColor?: string, seedDemoAccounts = false) => {
       try {
         const created = await createWorkspaceApi(
           name,
