@@ -391,6 +391,21 @@ export function createApp() {
     res.status(200).send(payload);
   });
 
+  // Dynamic Google Search Console URL-Prefix Verification (HTML file)
+  app.get(/^\/(google[a-zA-Z0-9_-]+\.html)$/i, (req, res) => {
+    const raw = (process.env.GOOGLE_SITE_VERIFICATION || '').trim();
+    if (!raw) {
+      res
+        .status(404)
+        .type('text/plain')
+        .send('Set GOOGLE_SITE_VERIFICATION in Railway Variables.');
+      return;
+    }
+    const requestedFile = req.params[0];
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(`google-site-verification: ${requestedFile}`);
+  });
+
   app.post('/api/compliance/meta-data-deletion', (req, res) => {
     const baseUrl =
       process.env.PUBLIC_WEB_URL || resolvePublicServerOrigin(req);
@@ -2627,8 +2642,10 @@ export function createApp() {
   const staticWebDir =
     process.env.STATIC_WEB_DIR ||
     path.resolve(__dirname, '../../mobile/dist');
-  if (fs.existsSync(path.join(staticWebDir, 'index.html'))) {
-    app.use(express.static(staticWebDir));
+  const indexHtmlPath = path.join(staticWebDir, 'index.html');
+  if (fs.existsSync(indexHtmlPath)) {
+    const rawIndexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+    app.use(express.static(staticWebDir, { index: false }));
     app.get('*', (req, res, next) => {
       if (
         req.path.startsWith('/api/') ||
@@ -2639,7 +2656,21 @@ export function createApp() {
         next();
         return;
       }
-      res.sendFile(path.join(staticWebDir, 'index.html'));
+      const gVerify = (process.env.GOOGLE_SITE_VERIFICATION || '').trim();
+      if (gVerify) {
+        const metaMatch = gVerify.match(/content=["']([^"']+)["']/i);
+        const cleanToken = metaMatch
+          ? metaMatch[1]
+          : gVerify.replace(/^google-site-verification=/i, '').trim();
+        const injected = rawIndexHtml.replace(
+          '<head>',
+          `<head><meta name="google-site-verification" content="${cleanToken}" />`
+        );
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.status(200).send(injected);
+        return;
+      }
+      res.sendFile(indexHtmlPath);
     });
   }
 
