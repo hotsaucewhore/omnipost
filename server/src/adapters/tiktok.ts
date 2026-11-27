@@ -95,6 +95,27 @@ export const tiktokAdapter: PlatformAdapter = {
 
     ctx.onProgress('uploading', 15, 'Initializing TikTok Content Posting API v2...');
 
+    // Mandatory TikTok Content Posting API v2 prerequisite: query creator_info first
+    let allowedPrivacyOptions: string[] = [];
+    try {
+      const ciRes = await fetch(
+        'https://open.tiktokapis.com/v2/post/publish/creator_info/query/',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${ctx.account.accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+        }
+      );
+      const ciJson: any = await ciRes.json();
+      if (Array.isArray(ciJson?.data?.privacy_level_options)) {
+        allowedPrivacyOptions = ciJson.data.privacy_level_options;
+      }
+    } catch {
+      // Non-fatal if creator_info query fails
+    }
+
     const buildInitPayload = (privacyLevel: string) => ({
       post_info: {
         title: ctx.resolvedText.combinedCaptionOrDescription.slice(0, 2200),
@@ -127,16 +148,48 @@ export const tiktokAdapter: PlatformAdapter = {
       return { ok: r.ok, json: j };
     };
 
-    const preferredPrivacy = ctx.override.tiktokPrivacy ?? 'PUBLIC_TO_EVERYONE';
+    let preferredPrivacy: string = ctx.override.tiktokPrivacy ?? 'PUBLIC_TO_EVERYONE';
+    if (
+      allowedPrivacyOptions.length > 0 &&
+      !allowedPrivacyOptions.includes(preferredPrivacy)
+    ) {
+      preferredPrivacy = allowedPrivacyOptions.includes('SELF_ONLY')
+        ? 'SELF_ONLY'
+        : allowedPrivacyOptions[0];
+    }
+
     let { ok: initOk, json: initJson } = await requestInit(preferredPrivacy);
 
     // Unaudited / Sandbox TikTok apps require SELF_ONLY privacy until public review completes
-    if (
-      (!initOk || initJson?.error?.code !== 'ok') &&
-      preferredPrivacy !== 'SELF_ONLY' &&
-      String(initJson?.error?.code || '').includes('unaudited_client')
-    ) {
+    if ((!initOk || initJson?.error?.code !== 'ok') && preferredPrivacy !== 'SELF_ONLY') {
       ({ ok: initOk, json: initJson } = await requestInit('SELF_ONLY'));
+    }
+
+    // If Direct Post still blocks (e.g. public TikTok profile in Sandbox), fall back cleanly to Inbox Draft upload (video.upload)
+    if (!initOk || initJson?.error?.code !== 'ok') {
+      const inboxRes = await fetch(
+        'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${ctx.account.accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: JSON.stringify({
+            source_info: {
+              source: 'FILE_UPLOAD',
+              video_size: fileSize,
+              chunk_size: fileSize,
+              total_chunk_count: 1,
+            },
+          }),
+        }
+      );
+      const inboxJson: any = await inboxRes.json();
+      if (inboxRes.ok && inboxJson?.error?.code === 'ok') {
+        initOk = true;
+        initJson = inboxJson;
+      }
     }
 
     if (!initOk || initJson?.error?.code !== 'ok') {
