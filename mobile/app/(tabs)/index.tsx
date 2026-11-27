@@ -183,6 +183,10 @@ async function probeWebVideoFile(file: File): Promise<VideoAssetMeta> {
     const vid = document.createElement('video');
     vid.preload = 'metadata';
     vid.onloadedmetadata = () => {
+      const safeDur =
+        Number.isFinite(vid.duration) && vid.duration > 0
+          ? Math.max(1, Math.round(vid.duration))
+          : 30;
       resolve({
         uri: objectUrl,
         fileName: file.name,
@@ -190,7 +194,7 @@ async function probeWebVideoFile(file: File): Promise<VideoAssetMeta> {
         fileSizeBytes: file.size,
         width: vid.videoWidth || 1080,
         height: vid.videoHeight || 1920,
-        durationSec: Math.max(1, Math.round(vid.duration || 30)),
+        durationSec: safeDur,
         isSamplePreset: false,
       });
     };
@@ -449,9 +453,23 @@ export default function CreateStudioScreen() {
     });
     if (res.canceled || !res.assets?.[0]) return;
     const asset = res.assets[0];
-    const durationSec = asset.duration
-      ? Math.max(1, Math.round(asset.duration / 1000))
-      : 30;
+
+    if (Platform.OS === 'web' && (asset as any).file instanceof File) {
+      const probed = await probeWebVideoFile((asset as any).file);
+      setPhotos([]);
+      setVideo(probed);
+      applyRecommendedSelection(probed, []);
+      return;
+    }
+
+    // expo-image-picker returns seconds on Web and milliseconds on iOS/Android
+    const rawDur = asset.duration;
+    const durationSec =
+      rawDur && Number.isFinite(rawDur) && rawDur > 0
+        ? Platform.OS === 'web'
+          ? Math.max(1, Math.round(rawDur > 1000 ? rawDur / 1000 : rawDur))
+          : Math.max(1, Math.round(rawDur / 1000))
+        : 30;
     const picked: VideoAssetMeta = {
       uri: asset.uri,
       fileName: asset.fileName || `video_${Date.now()}.mp4`,
