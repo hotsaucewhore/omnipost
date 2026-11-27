@@ -196,6 +196,33 @@ export function createApp() {
   app.set('trust proxy', 1);
   app.use(cors());
 
+  // Automatically upgrade plain http:// visits to https:// in production and set HSTS
+  app.use((req, res, next) => {
+    const host = String(req.get('host') || '');
+    const isLocal =
+      host.startsWith('localhost') ||
+      host.startsWith('127.0.0.1') ||
+      host.startsWith('0.0.0.0');
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
+      .split(',')[0]
+      .trim()
+      .toLowerCase();
+
+    if (!isLocal && req.path !== '/api/health') {
+      if (forwardedProto === 'http') {
+        res.redirect(301, `https://${host}${req.originalUrl}`);
+        return;
+      }
+      if (forwardedProto === 'https' || req.secure) {
+        res.setHeader(
+          'Strict-Transport-Security',
+          'max-age=31536000; includeSubDomains'
+        );
+      }
+    }
+    next();
+  });
+
   const resolvePublicServerOrigin = (req: express.Request): string => {
     if (process.env.PUBLIC_SERVER_URL) {
       return process.env.PUBLIC_SERVER_URL.replace(/\/+$/, '');
